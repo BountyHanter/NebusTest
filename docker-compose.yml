@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16
+    restart: always
+    container_name: postgres_db
+    env_file:
+      - env.example
+    networks:
+      - internal_network  # Изолированная сеть
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:   # Проверка готовности БД
+      test: ["CMD-SHELL", "pg_isready -U postgres -d testcasedb"]
+      interval: 5s
+      retries: 5
+      timeout: 3s
+
+  app:
+    build: .
+    restart: always
+    container_name: fastapi_app
+    depends_on:
+      db:
+        condition: service_healthy  # FastAPI стартует ТОЛЬКО после того, как БД готова
+    env_file:
+      - env.example
+    ports:
+      - "8000:8000"
+    networks:
+      - internal_network
+
+
+volumes:
+  pg_data:
+
+networks:
+  internal_network:
+    driver: bridge
